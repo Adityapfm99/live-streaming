@@ -94,6 +94,9 @@ CHANNEL_LAYERS = {
     },
 }
 
+MIDTRANS_SERVER_KEY = 'SB-Mid-client-pOc8Oo9atQGFVZ7E'
+MIDTRANS_CLIENT_KEY = 'SB-Mid-server-OKkWODAmaeFtviwor83vgXdZ'
+
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
