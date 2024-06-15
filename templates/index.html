@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Stream</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <script>
+        function showAlert(message) {
+            const alertDiv = document.getElementById('custom-alert');
+            const alertMessage = document.getElementById('custom-alert-message');
+            alertMessage.textContent = message;
+            alertDiv.style.display = 'block';
+        }
+
+        function hideAlert() {
+            const alertDiv = document.getElementById('custom-alert');
+            alertDiv.style.display = 'none';
+        }
+
+        function register() {
+            const username = document.getElementById('reg_username').value;
+            const password = document.getElementById('reg_password').value;
+            const email = document.getElementById('reg_email').value;
+
+            fetch('/api/register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    email: email
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    showAlert('Registration successful. Please log in.');
+                    showLoginForm();
+                } else {
+                    showAlert('Registration failed.');
+                }
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('login_username').value;
+            const password = document.getElementById('login_password').value;
+
+            fetch('/api/token/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.access) {
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    showAlert('Login successful.');
+                    document.getElementById('stream_interface').style.display = 'block';
+                    document.getElementById('auth_interface').style.display = 'none';
+                } else {
+                    showAlert('Login failed.');
+                }
+            });
+        }
+
+        function startStream() {
+            fetch('/api/streams/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    title: 'Test Stream',
+                    description: 'This is a test stream'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {  // Ensure the stream ID is available
+                    const streamId = data.id;
+                    const username = data.username;
+                    localStorage.setItem('stream_id', streamId);
+                    showAlert(`Stream created successfully by ${username}`);
+                    connectWebSocket(streamId);
+                } else {
+                    console.error('Stream creation failed', data);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function connectWebSocket(streamId) {
+            const ws = new WebSocket(`ws://${window.location.host}/ws/stream/${streamId}/`);
+            ws.onmessage = function(event) {
+                const message = JSON.parse(event.data).message;
+                document.getElementById('messages').innerHTML += '<p>' + message + '</p>';
+            };
+        }
+
+        function sendMessage() {
+            const streamId = parseInt(localStorage.getItem('stream_id'));  // Ensure streamId is an integer
+            const message = document.getElementById('message').value;
+            fetch(`/api/comments/create/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    stream: streamId,  // Ensure stream is sent as an integer
+                    content: message
+                })
+            });
+        }
+
+        function showRegisterForm() {
+            document.getElementById('register_form').style.display = 'block';
+            document.getElementById('login_form').style.display = 'none';
+        }
+
+        function showLoginForm() {
+            document.getElementById('register_form').style.display = 'none';
+            document.getElementById('login_form').style.display = 'block';
+        }
+    </script>
+</head>
+<body>
+    <div class="container" id="auth_interface">
+        <div id="login_form">
+            <h2>Login</h2>
+            <input type="text" id="login_username" placeholder="Username">
+            <input type="password" id="login_password" placeholder="Password">
+            <button onclick="login()">Login</button>
+            <p>Don't have an account? <a href="javascript:void(0)" onclick="showRegisterForm()">Register here</a></p>
+        </div>
+
+        <div id="register_form" style="display: none;">
+            <h2>Register</h2>
+            <input type="text" id="reg_username" placeholder="Username">
+            <input type="password" id="reg_password" placeholder="Password">
+            <input type="email" id="reg_email" placeholder="Email">
+            <button onclick="register()">Register</button>
+            <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginForm()">Login here</a></p>
+        </div>
+    </div>
+
+    <div class="container" id="stream_interface" style="display:none;">
+        <h1>Welcome to the Live Stream</h1>
+        <button onclick="startStream()">Start Stream</button>
+        <input type="text" id="message" placeholder="Enter your message">
+        <button onclick="sendMessage()">Send</button>
+        <div id="messages"></div>
+    </div>
+
+    <div id="custom-alert">
+        <p id="custom-alert-message"></p>
+        <button onclick="hideAlert()">OK</button>
+    </div>
+</body>
+</html>
