@@ -2,7 +2,7 @@
 
 from django.contrib.auth.models import User
 from django.shortcuts import render,redirect
-from httpcore import Response
+from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from rest_framework.views import APIView
@@ -33,6 +33,7 @@ def create_donation(request):
         redirect_url = create_midtrans_transaction(donation.id, donation.amount)
         return redirect(redirect_url)
     return render(request, 'donation_form.html')
+
 class StartStreamView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -43,7 +44,7 @@ class StartStreamView(APIView):
             stream.save()
             return Response({'status': 'Stream started'}, status=status.HTTP_200_OK)
         except Stream.DoesNotExist:
-            return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': 'Stream stoped'},status=status.HTTP_404_NOT_FOUND)
 
 class StopStreamView(APIView):
     permission_classes = [IsAuthenticated]
@@ -58,15 +59,15 @@ class StopStreamView(APIView):
             return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-class CreateStreamView(generics.CreateAPIView):
-    queryset = Stream.objects.all()
-    serializer_class = StreamSerializer
-    permission_classes = [IsAuthenticated]
+# class CreateStreamView(generics.CreateAPIView):
+#     queryset = Stream.objects.all()
+#     serializer_class = StreamSerializer
+#     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        donation = serializer.save()
-        # Trigger the Celery task
-        process_donation.delay(donation.id)
+#     def perform_create(self, serializer):
+#         donation = serializer.save()
+#         # Trigger the Celery task
+#         process_donation.delay(donation.id)
 
     def update(self, request, *args, **kwargs):
         stream = self.get_object()
@@ -80,10 +81,10 @@ class StreamVideoView(APIView):
     def get(self, request, pk):
         try:
             stream = Stream.objects.get(pk=pk)
-            video_url = f"http://your.streaming.server/stream/{stream.id}/video.m3u8"
-            return JsonResponse({'video_url': video_url})
+            video_url = f"http://127.0.0.1:8080/live/test/{stream.id}.m3u8"
+            return Response({'video_url': video_url})
         except Stream.DoesNotExist:
-            return JsonResponse({'error': 'Stream not found'}, status=404)
+            return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class CreateStreamView(generics.CreateAPIView):
     queryset = Stream.objects.all()
@@ -106,20 +107,22 @@ class ConfirmDonationView(generics.UpdateAPIView):
         return Response(DonationSerializer(donation).data)
 
 class CreateCommentView(generics.CreateAPIView):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'request': self.request
+        })
+        return context
 
 class StreamCommentsView(generics.ListAPIView):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
 
     def get_queryset(self):
         stream_id = self.kwargs['stream_id']
-        return Comment.objects.filter(stream_id=stream_id)
+        return Comment.objects.filter(stream_id=stream_id).order_by('-created_at')
 
 @csrf_exempt
 def midtrans_notification(request):

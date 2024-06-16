@@ -77,7 +77,10 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
-INSTALLED_APPS += ('django_celery_results',)
+INSTALLED_APPS += (
+    'django_celery_results',
+    'video_encoding',
+    )
 
 # Add Django-Celery-Results configuration
 CELERY_RESULT_BACKEND = 'django-db'
@@ -87,7 +90,8 @@ ASGI_APPLICATION = 'livestream.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [('127.0.0.1', 6379)],
         },
@@ -109,6 +113,22 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+VIDEO_ENCODING_FORMATS = {
+    'hls': [
+        {'name': '144p', 'width': 256, 'height': 144, 'bitrate': '300k'},
+        {'name': '240p', 'width': 426, 'height': 240, 'bitrate': '500k'},
+        {'name': '360p', 'width': 640, 'height': 360, 'bitrate': '800k'},
+        {'name': '480p', 'width': 854, 'height': 480, 'bitrate': '1M'},
+        {'name': '720p', 'width': 1280, 'height': 720, 'bitrate': '1.5M'},
+        {'name': '1080p', 'width': 1920, 'height': 1080, 'bitrate': '3M'},
+    ]
+}
+
+VIDEO_ENCODING_FFMPEG_PATH = '/usr/local/bin/ffmpeg'
+
+
+VIDEO_ENCODING_FFMPEG_PATH = '/usr/local/bin/ffmpeg'
+VIDEO_ENCODING_FFPROBE_PATH = '/usr/local/bin/ffprobe'
 
 ROOT_URLCONF = 'livestream.urls'
 

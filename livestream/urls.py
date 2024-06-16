@@ -16,10 +16,3 @@ urlpatterns = [
     path('api/comments/<int:stream_id>/', StreamCommentsView.as_view(), name='stream_comments'),
 ]
 
-
-# livestream/urls.py
-
-from django.contrib import admin
-from django.urls import path, include
-from streaming.views import index
-

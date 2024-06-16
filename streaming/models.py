@@ -2,14 +2,19 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+from video_encoding.fields import VideoField
+
 
 class Stream(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField()
-    is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    video = VideoField(width_field='video_width', height_field='video_height', blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
 
 class Donation(models.Model):
     stream = models.ForeignKey(Stream, on_delete=models.CASCADE)
@@ -19,10 +24,15 @@ class Donation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Comment(models.Model):
-    stream = models.ForeignKey(Stream, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    username = models.CharField(max_length=255)
     content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    stream = models.ForeignKey(Stream, related_name='comments', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True) 
+
+    
+
+    def __str__(self):
+        return self.usernam
 
 class Payment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

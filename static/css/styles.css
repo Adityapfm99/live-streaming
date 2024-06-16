@@ -1,91 +1,67 @@
-/* static/css/styles.css */
-
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
+    background-color: #f9f9f9;
     margin: 0;
     padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    position: relative;
+}
+
+.header {
+    background-color: #ff0000;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 24px;
 }
 
 .container {
-    width: 100%;
-    max-width: 400px;
+    width: 80%;
+    margin: 0 auto;
     padding: 20px;
-    background-color: #fff;
+    background-color: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+}
+
+.auth-container, .stream-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.auth-container input, .auth-container button, .stream-container button, .comment-container input, .comment-container button, .donation-container input, .donation-container button {
+    padding: 10px;
+    margin: 5px;
+    width: 300px;
+}
+
+.video-container {
+    margin-top: 20px;
+}
+
+.comment-container, .donation-container {
+    margin-top: 20px;
+    width: 100%;
     text-align: center;
 }
 
-h1, h2 {
-    color: #333;
-}
-
-input[type="text"], input[type="password"], input[type="email"] {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-button {
-    background-color: #007bff;
-    color: #fff;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 10px;
-    width: 100%;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-#messages {
+.comments {
     margin-top: 20px;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
     padding: 10px;
     background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 4px;
 }
 
-p {
-    margin-top: 10px;
+.comment {
+    margin-bottom: 10px;
 }
 
-/* Styles for the custom alert */
-#custom-alert {
+.alert {
     display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
+    background-color: #ffcc00;
+    color: black;
+    padding: 10px;
+    margin: 10px 0;
     text-align: center;
-    z-index: 1000;
-}
-
-#custom-alert button {
-    margin-top: 10px;
-    background-color: #007bff;
-    border: none;
-    border-radius: 4px;
-    padding: 10px 15px;
-    cursor: pointer;
-    color: white;
-}
-
-#custom-alert button:hover {
-    background-color: #0056b3;
 }

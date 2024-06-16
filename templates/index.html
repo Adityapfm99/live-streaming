@@ -1,9 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Stream</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet">
+    <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
+    <style>
+        /* Your CSS styles */
+    </style>
+</head>
+<body>
+    <div class="header">
+        Live Stream Platform
+    </div>
+    <div class="container">
+        <div id="auth_interface" class="auth-container">
+            <div id="login_form">
+                <h2>Login</h2>
+                <input type="text" id="login_username" placeholder="Username">
+                <input type="password" id="login_password" placeholder="Password">
+                <button onclick="login()">Login</button>
+                <p>Don't have an account? <a href="javascript:void(0)" onclick="showRegisterForm()">Register here</a></p>
+            </div>
+            <div id="register_form" style="display: none;">
+                <h2>Register</h2>
+                <input type="text" id="reg_username" placeholder="Username">
+                <input type="password" id="reg_password" placeholder="Password">
+                <input type="email" id="reg_email" placeholder="Email">
+                <button onclick="register()">Register</button>
+                <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginForm()">Login here</a></p>
+            </div>
+        </div>
+        <div id="stream_interface" class="stream-container" style="display:none;">
+            <h1>Welcome to the Live Stream</h1>
+            <button onclick="startStream()">Create Stream</button>
+            <button onclick="startStreamSession()">Start Stream</button>
+            <button onclick="stopStreamSession()">Stop Stream</button>
+            <button onclick="showCommentMenu()">Comment</button>
+            <button onclick="showDonateMenu()">Donate</button>
+            <div class="video-container">
+                <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"></video>
+            </div>
+            <div id="comment_menu" class="comment-container" style="display:none;">
+                <h2>Comments</h2>
+                <input type="text" id="message" placeholder="Enter your message">
+                <button onclick="sendMessage()">Send</button>
+                <div id="messages" class="comments"></div>
+            </div>
+            <div id="donate_menu" class="donation-container" style="display:none;">
+                <h2>Donate</h2>
+                <input type="number" id="donation_amount" placeholder="Enter amount">
+                <button onclick="sendDonation()">Donate</button>
+            </div>
+            <div id="history_comments" class="comment-container" style="margin-top: 20px;">
+                <h2>Comment History</h2>
+                <div id="history_messages" class="comments"></div>
+            </div>
+        </div>
+        <div id="custom-alert" class="alert">
+            <p id="custom-alert-message"></p>
+            <button onclick="hideAlert()">OK</button>
+        </div>
+    </div>
     <script>
         function showAlert(message) {
             const alertDiv = document.getElementById('custom-alert');
@@ -63,9 +124,11 @@
                 if (data.access) {
                     localStorage.setItem('access_token', data.access);
                     localStorage.setItem('refresh_token', data.refresh);
+                    localStorage.setItem('username', username);
                     showAlert('Login successful.');
                     document.getElementById('stream_interface').style.display = 'block';
                     document.getElementById('auth_interface').style.display = 'none';
+                    loadCommentHistory();
                 } else {
                     showAlert('Login failed.');
                 }
@@ -81,17 +144,19 @@
                 },
                 body: JSON.stringify({
                     title: 'Test Stream',
-                    description: 'This is a test stream'
+                    description: 'This is a test stream',
+                    username: localStorage.getItem('username')
                 })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.id) {  // Ensure the stream ID is available
+                if (data.id) {
                     const streamId = data.id;
                     const username = data.username;
                     localStorage.setItem('stream_id', streamId);
                     showAlert(`Stream created successfully by ${username}`);
                     connectWebSocket(streamId);
+                    initializeVideoStream(streamId);
                 } else {
                     console.error('Stream creation failed', data);
                 }
@@ -103,8 +168,71 @@
             const ws = new WebSocket(`ws://${window.location.host}/ws/stream/${streamId}/`);
             ws.onmessage = function(event) {
                 const message = JSON.parse(event.data).message;
-                document.getElementById('messages').innerHTML += '<p>' + message + '</p>';
+                document.getElementById('messages').innerHTML += '<div class="comment">' + message + '</div>';
             };
+        }   
+
+        function initializeVideoStream(streamId) {
+            const videoElement = document.getElementById('video');
+            const player = videojs(videoElement, {
+                liveui: true,
+                controls: true,
+                preload: 'auto',
+                autoplay: true
+            });
+            player.src({
+                src: videoUrl,
+                type: 'application/x-mpegURL'
+            });
+
+            fetch(`/api/streams/${streamId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    player.src({
+                        src: data.video_url,
+                        type: 'application/x-mpegURL'
+                    });
+                });
+        }
+
+        function startStreamSession() {
+            const streamId = localStorage.getItem('stream_id');
+            fetch(`/api/streams/${streamId}/start/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'Stream started') {
+                    showAlert('Stream started successfully.');
+                } else {
+                    showAlert('Failed to start stream.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function stopStreamSession() {
+            const streamId = localStorage.getItem('stream_id');
+            fetch(`/api/streams/${streamId}/stop/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'Stream stopped') {
+                    showAlert('Stream stopped successfully.');
+                } else {
+                    showAlert('Failed to stop stream.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         function sendMessage() {
@@ -118,8 +246,41 @@
                 },
                 body: JSON.stringify({
                     stream: streamId,  // Ensure stream is sent as an integer
-                    content: message
+                    content: message,
+                    username: localStorage.getItem('username')
                 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    showAlert('Comment added successfully!');
+                    loadCommentHistory();
+                } else {
+                    showAlert('Failed to add comment.');
+                }
+            });
+        }
+
+        function sendDonation() {
+            const amount = document.getElementById('donation_amount').value;
+            fetch(`/api/donations/create/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    amount: amount,
+                    username: localStorage.getItem('username')
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    showAlert('Donation successful!');
+                } else {
+                    showAlert('Donation failed.');
+                }
             });
         }
 
@@ -132,39 +293,57 @@
             document.getElementById('register_form').style.display = 'none';
             document.getElementById('login_form').style.display = 'block';
         }
+
+        function showCommentMenu() {
+            document.getElementById('comment_menu').style.display = 'block';
+            document.getElementById('donate_menu').style.display = 'none';
+        }
+
+        function showDonateMenu() {
+            document.getElementById('comment_menu').style.display = 'none';
+            document.getElementById('donate_menu').style.display = 'block';
+        }
+
+        function loadCommentHistory() {
+            const streamId = localStorage.getItem('stream_id');
+            fetch(`/api/comments/${streamId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const historyMessages = document.getElementById('history_messages');
+                historyMessages.innerHTML = '';
+                data.forEach(comment => {
+                    const commentElement = document.createElement('div');
+                    commentElement.classList.add('comment');
+
+                    const avatar = document.createElement('img');
+                    avatar.src = 'https://via.placeholder.com/40';  // Replace with actual avatar URL
+                    avatar.classList.add('avatar');
+
+                    const commentContent = document.createElement('div');
+                    commentContent.classList.add('comment-content');
+
+                    const username = document.createElement('div');
+                    username.classList.add('username');
+                    username.textContent = comment.username;
+
+                    const text = document.createElement('div');
+                    text.classList.add('text');
+                    text.textContent = comment.content;
+
+                    commentContent.appendChild(username);
+                    commentContent.appendChild(text);
+                    commentElement.appendChild(avatar);
+                    commentElement.appendChild(commentContent);
+                    historyMessages.appendChild(commentElement);
+                });
+            });
+        }
     </script>
-</head>
-<body>
-    <div class="container" id="auth_interface">
-        <div id="login_form">
-            <h2>Login</h2>
-            <input type="text" id="login_username" placeholder="Username">
-            <input type="password" id="login_password" placeholder="Password">
-            <button onclick="login()">Login</button>
-            <p>Don't have an account? <a href="javascript:void(0)" onclick="showRegisterForm()">Register here</a></p>
-        </div>
-
-        <div id="register_form" style="display: none;">
-            <h2>Register</h2>
-            <input type="text" id="reg_username" placeholder="Username">
-            <input type="password" id="reg_password" placeholder="Password">
-            <input type="email" id="reg_email" placeholder="Email">
-            <button onclick="register()">Register</button>
-            <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginForm()">Login here</a></p>
-        </div>
-    </div>
-
-    <div class="container" id="stream_interface" style="display:none;">
-        <h1>Welcome to the Live Stream</h1>
-        <button onclick="startStream()">Start Stream</button>
-        <input type="text" id="message" placeholder="Enter your message">
-        <button onclick="sendMessage()">Send</button>
-        <div id="messages"></div>
-    </div>
-
-    <div id="custom-alert">
-        <p id="custom-alert-message"></p>
-        <button onclick="hideAlert()">OK</button>
-    </div>
 </body>
 </html>
