@@ -33,9 +33,9 @@ Layers and Components:
 
 ## ERD
 ```bash
-![Alt text](image/erd.png)
-```
 
+```
+![Alt text](image/erd.png)
 
 
 ## Start Django
