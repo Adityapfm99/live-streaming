@@ -4,12 +4,12 @@
 ## Tech Stack
 ```bash
 
-[X] Backend: Django, Django Channels (untuk WebSocket)
-[X] Frontend : Bebas (HTML, CSS, JavaScript)
-[X] Database:  (SQLite)
-[X] Payment Gateway : Midtrans
-[X] Streaming Server:  Nginx-RTMP
-[X] Message Broker: Redis
+* Backend: Django, Django Channels
+* Frontend :HTML, CSS, JavaScript
+* Database:  SQLite
+* Payment Gateway : Midtrans
+* Streaming Server:  Nginx-RTMP
+* Message Broker: Redis
 ```
 
 
