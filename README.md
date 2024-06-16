@@ -18,3 +18,13 @@ Layers and Components:
     * Components: Payment gateway API (e.g., Midtrans), WebSocket for real-time updates.
     * Responsibilities: Handle external service integrations and real-time communication
 ```
+
+## Start Django
+```bash
+python manage.py runserver
+```
+
+## Start Celery
+```bash
+celery -A livestream worker --loglevel=info
+```
