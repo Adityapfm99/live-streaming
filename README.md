@@ -30,6 +30,14 @@ Layers and Components:
     * Responsibilities: Handle external service integrations and real-time communication
 ```
 
+
+## ERD
+```bash
+![Alt text](image/erd.png)
+```
+
+
+
 ## Start Django
 ```bash
 python manage.py runserver
