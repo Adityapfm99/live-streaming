@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'streaming',
     'channels',
+    'drf_yasg',
 ]
 
 REST_FRAMEWORK = {

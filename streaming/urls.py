@@ -3,6 +3,21 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import RegisterView, CreateStreamView, StartStreamView, StopStreamView, ConfirmDonationView, CreateCommentView, StreamCommentsView, StreamVideoView, create_donation, midtrans_notification
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="API Documentation",
+        default_version='v1',
+        description="API documentation for Livestream",
+        terms_of_service="https://www.google.com/policies/terms/",
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    #  permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -17,4 +32,6 @@ urlpatterns = [
     path('comments/create/', CreateCommentView.as_view(), name='create_comment'),
     path('comments/<int:stream_id>/', StreamCommentsView.as_view(), name='stream_comments'),
     path('midtrans/notification/', midtrans_notification, name='midtrans_notification'),
+    path('swagger/',  schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('docs/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]

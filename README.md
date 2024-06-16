@@ -33,9 +33,17 @@ Layers and Components:
 
 ## ERD
 ```bash
-
 ```
 ![Alt text](image/erd.png)
+
+## API DOCS (swagger)
+```bash
+http://127.0.0.1:8000/docs/
+
+```
+
+![Alt text](image/swagger.png.png)
+
 
 
 ## Start Django
