@@ -42,7 +42,7 @@ http://127.0.0.1:8000/docs/
 
 ```
 
-![Alt text](image/swagger.png.png)
+![Alt text](image/swagger.png)
 
 
 
