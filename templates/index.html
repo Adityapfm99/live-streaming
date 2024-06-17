@@ -9,12 +9,27 @@
     <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet">
     <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
     <style>
-        /* Your CSS styles */
+        .video-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            width: 80%; /* Adjust the width as needed */
+        }
+        .video-js {
+            width: 100% !important; /* Ensure the video takes the full width of the container */
+            height: auto; /* Maintain aspect ratio */
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        Live Stream Platform
+        Live Stream
     </div>
     <div class="container">
         <div id="auth_interface" class="auth-container">
@@ -42,7 +57,7 @@
             <button onclick="showCommentMenu()">Comment</button>
             <button onclick="showDonateMenu()">Donate</button>
             <div class="video-container">
-                <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"></video>
+                <video id="video" class="video-js vjs-default-skin" controls preload="auto"></video>
             </div>
             <div id="comment_menu" class="comment-container" style="display:none;">
                 <h2>Comments</h2>
@@ -179,10 +194,6 @@
                 controls: true,
                 preload: 'auto',
                 autoplay: true
-            });
-            player.src({
-                src: videoUrl,
-                type: 'application/x-mpegURL'
             });
 
             fetch(`/api/streams/${streamId}/`)

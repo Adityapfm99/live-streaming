@@ -34,7 +34,15 @@ body {
 }
 
 .video-container {
-    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 200px auto;
+    width: 80%; /* Adjust the width as needed */
+}
+.video-js {
+    width: 100% !important; /* Ensure the video takes the full width of the container */
+    height: auto; /* Maintain aspect ratio */
 }
 
 .comment-container, .donation-container {
