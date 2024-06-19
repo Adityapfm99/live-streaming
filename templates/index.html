@@ -8,24 +8,28 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet">
     <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script> -->
 </head>
 <body>
     <div class="container">
         <div id="auth_interface" class="auth-container">
             <div id="login_form">
                 <h2>Login</h2>
-                <input type="text" id="login_username" placeholder="Username">
-                <input type="password" id="login_password" placeholder="Password">
-                <button onclick="login()">Login</button>
+                <div class="form-group">
+                    <input type="text" id="login_username" placeholder="Username">
+                    <input type="password" id="login_password" placeholder="Password">
+                    <button onclick="login()">Login</button>
+                </div>
                 <p>Don't have an account? <a href="javascript:void(0)" onclick="showRegisterForm()">Register here</a></p>
             </div>
             <div id="register_form" style="display: none;">
                 <h2>Register</h2>
-                <input type="text" id="reg_username" placeholder="Username">
-                <input type="password" id="reg_password" placeholder="Password">
-                <input type="email" id="reg_email" placeholder="Email">
-                <button onclick="register()">Register</button>
+                
+                <div class="form-group">
+                    <input type="text" id="login_username" placeholder="Username">
+                    <input type="password" id="login_password" placeholder="Password">
+                    <button onclick="register()">Register</button>
+                </div>
+                
                 <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginForm()">Login here</a></p>
             </div>
         </div>
@@ -59,6 +63,10 @@
     <script>
         let streamId;
         let ws;
+
+        const avatarUrl = "https://cdn-icons-png.flaticon.com/512/5556/5556499.png";
+        // const avatarUrl = `{% static '/image/image.png' %}`
+
 
         function showAlert(message) {
             const alertDiv = document.getElementById('custom-alert');
@@ -118,6 +126,7 @@
                 if (data.access) {
                     localStorage.setItem('access_token', data.access);
                     localStorage.setItem('refresh_token', data.refresh);
+                    localStorage.setItem('username', username); // Store username in localStorage
                     showAlert('Login successful.');
                     document.getElementById('stream_interface').style.display = 'block';
                     document.getElementById('auth_interface').style.display = 'none';
@@ -160,8 +169,11 @@
                 console.log('WebSocket connection opened');
             };
             ws.onmessage = function(event) {
-                const message = JSON.parse(event.data).message;
-                document.getElementById('messages').innerHTML += '<div class="comment">' + message + '</div>';
+                const data = JSON.parse(event.data);
+                if (data.type === 'comment') {
+                    const comment = data.comment;
+                    displayComment(comment);
+                }
             };
             ws.onerror = function(error) {
                 console.error('WebSocket error:', error);
@@ -248,10 +260,61 @@
         }
 
         function sendMessage() {
+            const username = localStorage.getItem('username');
             const message = document.getElementById('message').value;
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ 'message': message }));
+            if (message.trim() === "") {
+                alert("Comment cannot be empty.");
+                return;
             }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ 'username': username, 'message': message }));
+            }
+        }
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) {
+                console.error('Invalid date:', timestamp);
+                return 'Invalid date';
+            }
+            const yyyy = date.getUTCFullYear();
+            const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(date.getUTCDate()).padStart(2, '0');
+            const hh = String(date.getUTCHours()).padStart(2, '0');
+            const min = String(date.getUTCMinutes()).padStart(2, '0');
+            const ss = String(date.getUTCSeconds()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        }
+        function displayComment(comment) {
+            const commentElement = document.createElement('div');
+            commentElement.classList.add('comment');
+            
+            const avatarElement = document.createElement('img');
+            avatarElement.src = avatarUrl;
+            avatarElement.alt = `${comment.username}'s avatar`;
+            avatarElement.classList.add('avatar');
+
+            const contentElement = document.createElement('div');
+            contentElement.classList.add('content');
+
+            const timestampElement = document.createElement('div');
+            timestampElement.classList.add('timestamp');
+            timestampElement.textContent = formatTimestamp(comment.created_at);
+
+            const usernameElement = document.createElement('div');
+            usernameElement.classList.add('username');
+            usernameElement.textContent = comment.username;
+                    
+            
+            const messageElement = document.createElement('div');
+            messageElement.textContent = comment.content;
+
+            contentElement.appendChild(usernameElement);
+            contentElement.appendChild(messageElement);
+            contentElement.appendChild(timestampElement);
+            commentElement.appendChild(avatarElement);
+            commentElement.appendChild(contentElement);
+
+            document.getElementById('messages').appendChild(commentElement);
         }
 
         function sendDonation() {

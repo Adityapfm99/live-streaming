@@ -1,12 +1,15 @@
 # streaming/views.py
 
 from asyncio import subprocess
+from asyncio.log import logger
 from django.contrib.auth.models import User
 from django.shortcuts import render,redirect
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404, HttpResponse, JsonResponse
 import subprocess
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from rest_framework.views import APIView
 from rest_framework import generics,status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -82,13 +85,6 @@ class StreamVideoView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        # try:
-        #     stream = Stream.objects.get(pk=pk)
-        #     video_url = f'/path/to/hls/{stream}.m3u8'
-        #     return Response({'video_url': video_url})
-        # except Stream.DoesNotExist:
-        #     return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
-        
         file_path = os.path.join(settings.HLS_ROOT, f'{pk}.m3u8')
         if os.path.exists(file_path):
             with open(file_path, 'rb') as f:
@@ -130,6 +126,19 @@ class CreateCommentView(generics.CreateAPIView):
         })
         return context
 
+    def perform_create(self, serializer):
+        comment = serializer.save()
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'stream_{comment.stream.id}',
+            {
+                'type': 'chat_message',
+                'comment': {
+                    'username': comment.username,
+                    'content': comment.content,
+                }
+            }
+        )
 class StreamCommentsView(generics.ListAPIView):
     serializer_class = CommentSerializer
 

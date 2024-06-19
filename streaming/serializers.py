@@ -31,11 +31,12 @@ class DonationSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    avatar = serializers.ImageField(source='user.profile.avatar', read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'username', 'content', 'stream', 'created_at']
-        read_only_fields = ['username']
+        fields = ['id', 'username', 'avatar', 'content', 'stream', 'created_at']
 
     def create(self, validated_data):
         request = self.context.get('request')

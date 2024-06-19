@@ -29,10 +29,8 @@ class Comment(models.Model):
     stream = models.ForeignKey(Stream, related_name='comments', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True) 
 
-    
-
     def __str__(self):
-        return self.usernam
+        return f'{self.user.username}: {self.content[:20]}'
 
 class Payment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
