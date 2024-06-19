@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-l(4+f6at2^xsja4+)z97u^&6c)*k^y!ca68v^)m!mk&0^55k1#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS =  ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -78,9 +78,16 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+HLS_URL = '/hls/'
+HLS_ROOT = '/var/usr/www/hls'  # Path to HLS files
+
+# Allow all origins for CORS
+CORS_ALLOW_ALL_ORIGINS = True
+
 INSTALLED_APPS += (
     'django_celery_results',
     'video_encoding',
+    'daphne',
     )
 
 # Add Django-Celery-Results configuration
@@ -151,7 +158,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'livestream.wsgi.application'
-ASGI_APPLICATION = 'livestream.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

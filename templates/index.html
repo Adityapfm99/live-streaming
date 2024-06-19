@@ -8,51 +8,9 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet">
     <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
-    <style>
-        .video-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px auto;
-            width: 80%; /* Adjust the width as needed */
-        }
-        .video-js {
-            width: 100% !important; /* Ensure the video takes the full width of the container */
-            height: auto; /* Maintain aspect ratio */
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .comment-container {
-            margin-top: 20px;
-        }
-        .comment {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        .comment img.avatar {
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        .comment-content {
-            display: flex;
-            flex-direction: column;
-        }
-        .comment-content .username {
-            font-weight: bold;
-        }
-        .comment-content .text {
-            margin-top: 5px;
-        }
-    </style>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script> -->
 </head>
 <body>
-    <div class="header">
-        Live Stream
-    </div>
     <div class="container">
         <div id="auth_interface" class="auth-container">
             <div id="login_form">
@@ -73,13 +31,13 @@
         </div>
         <div id="stream_interface" class="stream-container" style="display:none;">
             <h1>Welcome to the Live Stream</h1>
-            <button onclick="startStream()">Create Stream</button>
+            <button onclick="createStream()">Create Stream</button>
             <button onclick="startStreamSession()">Start Stream</button>
             <button onclick="stopStreamSession()">Stop Stream</button>
             <button onclick="showCommentMenu()">Comment</button>
             <button onclick="showDonateMenu()">Donate</button>
             <div class="video-container">
-                <video id="video" class="video-js vjs-default-skin" controls preload="auto"></video>
+                <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"></video>
             </div>
             <div id="comment_menu" class="comment-container" style="display:none;">
                 <h2>Comments</h2>
@@ -92,10 +50,6 @@
                 <input type="number" id="donation_amount" placeholder="Enter amount">
                 <button onclick="sendDonation()">Donate</button>
             </div>
-            <div id="history_comments" class="comment-container" style="margin-top: 20px;">
-                <h2>Comment History</h2>
-                <div id="history_messages" class="comments"></div>
-            </div>
         </div>
         <div id="custom-alert" class="alert">
             <p id="custom-alert-message"></p>
@@ -103,6 +57,9 @@
         </div>
     </div>
     <script>
+        let streamId;
+        let ws;
+
         function showAlert(message) {
             const alertDiv = document.getElementById('custom-alert');
             const alertMessage = document.getElementById('custom-alert-message');
@@ -161,18 +118,16 @@
                 if (data.access) {
                     localStorage.setItem('access_token', data.access);
                     localStorage.setItem('refresh_token', data.refresh);
-                    localStorage.setItem('username', username);
                     showAlert('Login successful.');
                     document.getElementById('stream_interface').style.display = 'block';
                     document.getElementById('auth_interface').style.display = 'none';
-                    loadCommentHistory();
                 } else {
                     showAlert('Login failed.');
                 }
             });
         }
 
-        function startStream() {
+        function createStream() {
             fetch('/api/streams/create/', {
                 method: 'POST',
                 headers: {
@@ -181,19 +136,16 @@
                 },
                 body: JSON.stringify({
                     title: 'Test Stream',
-                    description: 'This is a test stream',
-                    username: localStorage.getItem('username')
+                    description: 'This is a test stream'
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.id) {
-                    const streamId = data.id;
+                    streamId = data.id;
                     const username = data.username;
-                    localStorage.setItem('stream_id', streamId);
-                    showAlert(`Stream created successfully by ${username}`);
-                    connectWebSocket(streamId);
-                    initializeVideoStream(streamId);
+                    localStorage.setItem('stream_id', data.id);
+                    showAlert(`Stream created successfully by ${username}, stream ID: ${data.id}, Please update into OBS Key`);
                 } else {
                     console.error('Stream creation failed', data);
                 }
@@ -202,12 +154,26 @@
         }
 
         function connectWebSocket(streamId) {
-            const ws = new WebSocket(`ws://${window.location.host}/ws/stream/${streamId}/`);
+            ws = new WebSocket(`ws://${window.location.host}/ws/stream/${streamId}/`);
+            
+            ws.onopen = function() {
+                console.log('WebSocket connection opened');
+            };
             ws.onmessage = function(event) {
                 const message = JSON.parse(event.data).message;
                 document.getElementById('messages').innerHTML += '<div class="comment">' + message + '</div>';
             };
-        }   
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+            ws.onclose = function(event) {
+                if (event.wasClean) {
+                    console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+                } else {
+                    console.error('WebSocket connection closed unexpectedly');
+                }
+            };
+        }
 
         function initializeVideoStream(streamId) {
             const videoElement = document.getElementById('video');
@@ -218,16 +184,30 @@
                 autoplay: true
             });
 
-                player.src({
-                    src: `http://127.0.0.1:8080/hls/${streamId}.m3u8`,
-                    type: 'application/x-mpegURL'
-                });
-            }
+            player.src({
+                src: `http://127.0.0.1:8000/hls/${streamId}.m3u8`,
+                // src: `/hls/${streamId}.m3u8`,
+                type: 'application/x-mpegURL'
+            });
 
-            initializeVideoStream('test');
+            player.on('error', function() {
+                console.error('Error occurred:', player.error());
+            });
+
+            player.ready(function() {
+                console.log('Video.js player is ready');
+                player.play().catch(error => {
+                    console.error('Error playing video:', error);
+                });
+            });
+        }
 
         function startStreamSession() {
-            const streamId = localStorage.getItem('stream_id');
+            streamId = localStorage.getItem('stream_id'); 
+            if (!streamId) {
+                showAlert('No stream created. Please create a stream first.');
+                return;
+            }
             fetch(`/api/streams/${streamId}/start/`, {
                 method: 'POST',
                 headers: {
@@ -238,7 +218,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'Stream started') {
-                    showAlert('Stream started successfully.');
+                    showAlert(`Your stream key is: ${streamId}`);
+                    connectWebSocket(streamId);
+                    initializeVideoStream(streamId);
                 } else {
                     showAlert('Failed to start stream.');
                 }
@@ -247,7 +229,6 @@
         }
 
         function stopStreamSession() {
-            const streamId = localStorage.getItem('stream_id');
             fetch(`/api/streams/${streamId}/stop/`, {
                 method: 'POST',
                 headers: {
@@ -267,29 +248,10 @@
         }
 
         function sendMessage() {
-            const streamId = parseInt(localStorage.getItem('stream_id'));  // Ensure streamId is an integer
             const message = document.getElementById('message').value;
-            fetch(`/api/comments/create/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-                },
-                body: JSON.stringify({
-                    stream: streamId,  // Ensure stream is sent as an integer
-                    content: message,
-                    username: localStorage.getItem('username')
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.id) {
-                    showAlert('Comment added successfully!');
-                    loadCommentHistory();
-                } else {
-                    showAlert('Failed to add comment.');
-                }
-            });
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ 'message': message }));
+            }
         }
 
         function sendDonation() {
@@ -301,8 +263,7 @@
                     'Authorization': 'Bearer ' + localStorage.getItem('access_token')
                 },
                 body: JSON.stringify({
-                    amount: amount,
-                    username: localStorage.getItem('username')
+                    amount: amount
                 })
             })
             .then(response => response.json())
@@ -333,47 +294,6 @@
         function showDonateMenu() {
             document.getElementById('comment_menu').style.display = 'none';
             document.getElementById('donate_menu').style.display = 'block';
-        }
-
-        function loadCommentHistory() {
-            const streamId = localStorage.getItem('stream_id');
-            fetch(`/api/comments/${streamId}/`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                const historyMessages = document.getElementById('history_messages');
-                historyMessages.innerHTML = '';
-                data.forEach(comment => {
-                    const commentElement = document.createElement('div');
-                    commentElement.classList.add('comment');
-
-                    const avatar = document.createElement('img');
-                    avatar.src = 'https://via.placeholder.com/40';  // Replace with actual avatar URL
-                    avatar.classList.add('avatar');
-
-                    const commentContent = document.createElement('div');
-                    commentContent.classList.add('comment-content');
-
-                    const username = document.createElement('div');
-                    username.classList.add('username');
-                    username.textContent = comment.username;
-
-                    const text = document.createElement('div');
-                    text.classList.add('text');
-                    text.textContent = comment.content;
-
-                    commentContent.appendChild(username);
-                    commentContent.appendChild(text);
-                    commentElement.appendChild(avatar);
-                    commentElement.appendChild(commentContent);
-                    historyMessages.appendChild(commentElement);
-                });
-            });
         }
     </script>
 </body>

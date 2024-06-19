@@ -1,10 +1,12 @@
 # streaming/views.py
 
+from asyncio import subprocess
 from django.contrib.auth.models import User
 from django.shortcuts import render,redirect
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
+import subprocess
 from rest_framework.views import APIView
 from rest_framework import generics,status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -14,6 +16,8 @@ from .models import Donation, Comment, Stream
 from .serializers import UserSerializer, StreamSerializer, DonationSerializer, CommentSerializer
 from .tasks import process_donation
 from .models import Donation
+from django.conf import settings
+import os
 from services.payment_services import create_midtrans_transaction
 
 def index(request):
@@ -40,11 +44,20 @@ class StartStreamView(APIView):
     def post(self, request, pk):
         try:
             stream = Stream.objects.get(pk=pk, user=request.user)
-            stream.is_active = True
-            stream.save()
+            self.start_ffmpeg(stream.id)
             return Response({'status': 'Stream started'}, status=status.HTTP_200_OK)
         except Stream.DoesNotExist:
-            return Response({'status': 'Stream stoped'},status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def start_ffmpeg(self, stream_id):
+        ffmpeg_command = [
+            'ffmpeg', '-i', f'rtmp://127.0.0.1/live/{stream_id}',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+            '-c:a', 'aac', '-strict', '-2', '-f', 'hls',
+            '-hls_time', '3', '-hls_playlist_type', 'event',
+            f'/usr/local/var/www/hls/{stream_id}.m3u8'
+        ]
+        subprocess.Popen(ffmpeg_command)
 
 class StopStreamView(APIView):
     permission_classes = [IsAuthenticated]
@@ -59,16 +72,6 @@ class StopStreamView(APIView):
             return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-# class CreateStreamView(generics.CreateAPIView):
-#     queryset = Stream.objects.all()
-#     serializer_class = StreamSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def perform_create(self, serializer):
-#         donation = serializer.save()
-#         # Trigger the Celery task
-#         process_donation.delay(donation.id)
-
     def update(self, request, *args, **kwargs):
         stream = self.get_object()
         stream.is_active = True
@@ -79,12 +82,19 @@ class StreamVideoView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        try:
-            stream = Stream.objects.get(pk=pk)
-            video_url = f"http://127.0.0.1:8080/live/test/{stream.id}.m3u8"
-            return Response({'video_url': video_url})
-        except Stream.DoesNotExist:
-            return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
+        # try:
+        #     stream = Stream.objects.get(pk=pk)
+        #     video_url = f'/path/to/hls/{stream}.m3u8'
+        #     return Response({'video_url': video_url})
+        # except Stream.DoesNotExist:
+        #     return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        file_path = os.path.join(settings.HLS_ROOT, f'{pk}.m3u8')
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                return HttpResponse(f.read(), content_type="application/x-mpegURL")
+        else:
+            raise Http404
 
 class CreateStreamView(generics.CreateAPIView):
     queryset = Stream.objects.all()
@@ -93,7 +103,10 @@ class CreateStreamView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-
+        stream = serializer.save(user=self.request.user)
+       
+        return Response({'stream_id': stream.id})
+                        
 class ConfirmDonationView(generics.UpdateAPIView):
     queryset = Donation.objects.all()
     serializer_class = DonationSerializer
