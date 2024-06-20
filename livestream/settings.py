@@ -96,6 +96,7 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 
 ASGI_APPLICATION = 'livestream.asgi.application'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 
 CHANNEL_LAYERS = {
@@ -154,6 +155,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'livestream.context_processors.midtrans_client_key',
             ],
         },
     },
