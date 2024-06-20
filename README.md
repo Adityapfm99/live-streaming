@@ -23,6 +23,7 @@
     * Midtrans: For integrating the payment gateway --- inprogress
     * SQLite: As the database for development purposes.
     * Video.js: For handling video playback in the browser.
+    * OBS Studio: for video recording and live streaming.
 ```
 ## Workflow : 
 ```bash
@@ -30,15 +31,17 @@
     * Stream Management: Authenticated users can create, start, and stop live streams.
     * Video Playback: Uses Video.js to play the live stream.
     * Real-time Comments: Implemented using WebSockets via Django Channels. Users can post comments in real-time, and these comments are  displayed on the video screen.
-    * Donations: Users can make donations through a form. The form allows users to select a payment method Bank Transfer, Virtual Account, QRIS, or Payment Gateway. The donation is processed using the Midtrans API. -- in progress
+    * Donations: Users can make donations through a form. The form allows users to select a payment method Bank Transfer, Virtual Account, QRIS, or Payment Gateway. The donation is processed using the Midtrans API.  __ still in progress__
 ```
 ## Detailed Workflow
 ```bash
     1. User Authentication
         Registration: Users fill out a registration form. The data is sent to the backend via a POST request to the /api/register/ endpoint. Upon successful registration, users are redirected to the login page.
         Login: Users provide their credentials. These are validated against the database, and if valid, an access token is issued, which is stored in the local storage.
-    2. Stream Management
-        Create Stream: Users click the "Create Stream" button, which triggers a POST request to the backend (/api/streams/create/). The backend creates a new stream record and returns the stream ID and other details.
+        Logout: remove token and back to login page.
+    2. Stream Management & OBS Studio
+        Create Stream: Users click the "Create Stream" button, which triggers a POST request to the backend api/streams/create/  The backend creates a new stream record and returns the stream ID and other details.
+        OBS Studio : After created stream, stream id will showing in message, and stream id must be register in OBS as a stream key, also server OBS is rtmp://127.0.0.1/live.
         Start Stream: When users click "Start Stream", a POST request is sent to /api/streams/{stream_id}/start/, which starts the stream session.
         Stop Stream: Clicking "Stop Stream" sends a POST request to /api/streams/{stream_id}/stop/, ending the stream session.
     3. Video Playback
@@ -46,7 +49,7 @@
     4. Real-time Comments
         WebSocket Connection: A WebSocket connection is established when the stream starts. Users can send messages via this connection.
         Display Comments: Comments are displayed in real-time within a comments section that overlays the video. The comments section has a semi-transparent background.
-    5. Donations -- still in progress
+    5. Donations __still in progress__ 
         Donation Form: The donation form allows users to enter the amount and select a payment method.
         Process Payment: Upon form submission, a POST request is sent to the backend. If the selected method is Midtrans, the backend generates a transaction token using the Midtrans API and returns it to the frontend. The Snap.js library is used to handle the payment process.
         Manual Payments: If the manual payment method is selected, instructions are displayed to the user.
@@ -63,9 +66,7 @@
 http://127.0.0.1:8001/docs/
 
 ```
-
 ![Alt text](image/swagger.png)
-
 
 
 ## Start Django
@@ -78,3 +79,11 @@ python manage.py runserver
 celery -A livestream worker --loglevel=info
 ```
 
+## OBS Setting
+
+![Alt text](image/obs.png)
+
+
+## Real-time Comments
+
+![Alt text](image/comment.png)

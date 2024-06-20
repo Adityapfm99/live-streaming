@@ -38,13 +38,15 @@
         </div>
         </div>
         <div id="stream_interface" class="stream-container" style="display:none;">
-           
+        <div class="logout-icon" onclick="logout()">
+            <i class="fa fa-sign-out-alt"></i>
+        </div>
             <div class="stream-buttons">
                 <button class="stream-btn" onclick="createStream()"><i class="fas fa-video"></i> Create Stream</button>
                 <button class="stream-btn" onclick="startStreamSession()"><i class="fas fa-play"></i> Start Stream</button>
                 <button class="stream-btn" onclick="stopStreamSession()"><i class="fas fa-stop"></i> Stop Stream</button>
                 <button class="stream-btn" onclick="showCommentMenu()"><i class="fas fa-comment"></i> Comment</button>
-                <button class="stream-btn" onclick="showDonateMenu()"><i class="fas fa-donate"></i> Donate</button>
+                <button class="stream-btn" onclick="showDonateMenu()"><i class="fas fa-donate"></i> Donate</button>    
             </div>
             <div class="video-container">
                 <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"></video>
@@ -161,6 +163,15 @@
             });
         }
 
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            showAlert('Logged out successfully.');
+            document.getElementById('stream_interface').style.display = 'none';
+            document.getElementById('auth_interface').style.display = 'block';
+        }
+
         function createStream() {
             fetch('/api/streams/create/', {
                 method: 'POST',
@@ -173,7 +184,14 @@
                     description: 'This is a test stream'
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 401) {
+                    showAlert('Session expired. Please log in again.');
+                    logout();
+                    return;
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.id) {
                     streamId = data.id;
@@ -223,7 +241,6 @@
 
             player.src({
                 src: `http://127.0.0.1:8000/hls/${streamId}.m3u8`,
-                // src: `/hls/${streamId}.m3u8`,
                 type: 'application/x-mpegURL'
             });
 
@@ -252,7 +269,14 @@
                     'Authorization': 'Bearer ' + localStorage.getItem('access_token')
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 401) {
+                    showAlert('Session expired. Please log in again.');
+                    logout();
+                    return;
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'Stream started') {
                     showAlert(`Your stream key is: ${streamId}`);
@@ -289,6 +313,10 @@
             const message = document.getElementById('message').value;
             if (message.trim() === "") {
                 alert("Comment cannot be empty.");
+                return;
+            }
+            if (!streamId) {
+                alert("Comment cannot be used because there is no streamId");
                 return;
             }
             if (ws && ws.readyState === WebSocket.OPEN) {
