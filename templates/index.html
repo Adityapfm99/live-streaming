@@ -8,9 +8,12 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet">
     <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ client_key }}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
     <div class="container">
+        <h1>Welcome to the Live Stream</h1>
         <div id="auth_interface" class="auth-container">
             <div id="login_form">
                 <h2>Login</h2>
@@ -33,26 +36,48 @@
                 <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginForm()">Login here</a></p>
             </div>
         </div>
+        </div>
         <div id="stream_interface" class="stream-container" style="display:none;">
-            <h1>Welcome to the Live Stream</h1>
-            <button onclick="createStream()">Create Stream</button>
-            <button onclick="startStreamSession()">Start Stream</button>
-            <button onclick="stopStreamSession()">Stop Stream</button>
-            <button onclick="showCommentMenu()">Comment</button>
-            <button onclick="showDonateMenu()">Donate</button>
+           
+            <div class="stream-buttons">
+                <button class="stream-btn" onclick="createStream()"><i class="fas fa-video"></i> Create Stream</button>
+                <button class="stream-btn" onclick="startStreamSession()"><i class="fas fa-play"></i> Start Stream</button>
+                <button class="stream-btn" onclick="stopStreamSession()"><i class="fas fa-stop"></i> Stop Stream</button>
+                <button class="stream-btn" onclick="showCommentMenu()"><i class="fas fa-comment"></i> Comment</button>
+                <button class="stream-btn" onclick="showDonateMenu()"><i class="fas fa-donate"></i> Donate</button>
+            </div>
             <div class="video-container">
                 <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"></video>
+                <div id="comments-overlay" class="comments-overlay">
+                    <div id="messages" class="comments"></div>
+                </div>
             </div>
-            <div id="comment_menu" class="comment-container" style="display:none;">
+            <div id="comment_menu" class="comment-container" style="display:none;text-align: center;">
                 <h2>Comments</h2>
                 <input type="text" id="message" placeholder="Enter your message">
                 <button onclick="sendMessage()">Send</button>
-                <div id="messages" class="comments"></div>
             </div>
-            <div id="donate_menu" class="donation-container" style="display:none;">
+            <div id="donate_menu" class="donation-container" style="display:none;text-align: center;">
                 <h2>Donate</h2>
-                <input type="number" id="donation_amount" placeholder="Enter amount">
-                <button onclick="sendDonation()">Donate</button>
+                <form id="donation-form" method="POST" action="{% url 'donate' %}">
+                    {% csrf_token %}
+                    <label for="id_amount">Amount:</label>
+                    <input type="number" name="amount" id="id_amount" required><br><br>
+                    
+                    <label for="id_payment_method">Payment Method:</label>
+                    <select name="payment_method" id="id_payment_method">
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="virtual_account">Virtual Account</option>
+                        <option value="qris">QRIS</option>
+                        <option value="midtrans">Payment Gateway</option>
+                    </select><br><br>
+                    
+                    <button type="submit">Donate</button>
+                </form>
+            </div>
+            <div id="qris-container" style="display: none; text-align: center;">
+                <h3>Scan this QR Code to Pay</h3>
+                <img id="qris-qr-code" src="" alt="QR Code for QRIS Payment">
             </div>
         </div>
         <div id="custom-alert" class="alert">
@@ -65,21 +90,21 @@
         let ws;
 
         const avatarUrl = "https://cdn-icons-png.flaticon.com/512/5556/5556499.png";
-        // const avatarUrl = `{% static '/image/image.png' %}`
-
 
         function showAlert(message) {
-            const alertDiv = document.getElementById('custom-alert');
+        const alertDiv = document.getElementById('custom-alert');
             const alertMessage = document.getElementById('custom-alert-message');
             alertMessage.textContent = message;
-            alertDiv.style.display = 'block';
+            alertDiv.classList.add('show');
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+            }, 3000); // 3 seconds
         }
 
         function hideAlert() {
             const alertDiv = document.getElementById('custom-alert');
             alertDiv.style.display = 'none';
         }
-
         function register() {
             const username = document.getElementById('reg_username').value;
             const password = document.getElementById('reg_password').value;
@@ -303,8 +328,6 @@
             const usernameElement = document.createElement('div');
             usernameElement.classList.add('username');
             usernameElement.textContent = comment.username;
-                    
-            
             const messageElement = document.createElement('div');
             messageElement.textContent = comment.content;
 
@@ -317,27 +340,36 @@
             document.getElementById('messages').appendChild(commentElement);
         }
 
-        function sendDonation() {
-            const amount = document.getElementById('donation_amount').value;
-            fetch(`/api/donations/create/`, {
+        document.getElementById('donation-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetch(e.target.action, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: JSON.stringify({
-                    amount: amount
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.id) {
-                    showAlert('Donation successful!');
-                } else {
-                    showAlert('Donation failed.');
-                }
+                body: formData
             });
-        }
+            const data = await response.json();
+            if (data.token) {
+                snap.pay(data.token, {
+                    onSuccess: function(result) {
+                        alert('Payment success');
+                    },
+                    onPending: function(result) {
+                        alert('Waiting for payment');
+                    },
+                    onError: function(result) {
+                        alert('Payment failed');
+                    },
+                    onClose: function() {
+                        alert('Payment popup closed without finishing the payment');
+                    }
+                });
+            } else if (data.status === 'manual_payment_pending') {
+                alert('Please follow the manual payment instructions to complete your donation.');
+            }
+        });
 
         function showRegisterForm() {
             document.getElementById('register_form').style.display = 'block';

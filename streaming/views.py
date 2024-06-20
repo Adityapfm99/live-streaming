@@ -2,6 +2,12 @@
 
 from asyncio import subprocess
 from asyncio.log import logger
+from datetime import time
+import signal
+from django.contrib.auth import login, authenticate
+import json
+from .models import Payment
+from .form import PaymentForm 
 from django.contrib.auth.models import User
 from django.shortcuts import render,redirect
 from rest_framework.response import Response
@@ -17,11 +23,16 @@ from .serializers import UserSerializer, DonationSerializer, CommentSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import Donation, Comment, Stream
 from .serializers import UserSerializer, StreamSerializer, DonationSerializer, CommentSerializer
-from .tasks import process_donation
 from .models import Donation
 from django.conf import settings
 import os
-from services.payment_services import create_midtrans_transaction
+import midtransclient
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from .models import Payment
+from django.contrib.auth.forms import AuthenticationForm
 
 def index(request):
     return render(request, 'index.html')
@@ -30,16 +41,6 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
-
-def create_donation(request):
-    if request.method == 'POST':
-        amount = request.POST.get('amount')
-        user = request.user
-        stream_id = request.POST.get('stream_id')
-        donation = Donation.objects.create(user=user, stream_id=stream_id, amount=amount)
-        redirect_url = create_midtrans_transaction(donation.id, donation.amount)
-        return redirect(redirect_url)
-    return render(request, 'donation_form.html')
 
 class StartStreamView(APIView):
     permission_classes = [IsAuthenticated]
@@ -68,18 +69,21 @@ class StopStreamView(APIView):
     def post(self, request, pk):
         try:
             stream = Stream.objects.get(pk=pk, user=request.user)
-            stream.is_active = False
-            stream.save()
-            return Response({'status': 'Stream stopped'}, status=status.HTTP_200_OK)
+            if stream and stream.ffmpeg_pid:
+                self.stop_ffmpeg(stream.ffmpeg_pid)
+                stream.ffmpeg_pid = None
+                stream.save()
+                return Response({'status': 'Stream stopped'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Stream not running'}, status=status.HTTP_400_BAD_REQUEST)
         except Stream.DoesNotExist:
             return Response({'error': 'Stream not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-    def update(self, request, *args, **kwargs):
-        stream = self.get_object()
-        stream.is_active = True
-        stream.save()
-        return Response(StreamSerializer(stream).data)
+    def stop_ffmpeg(self, pid):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class StreamVideoView(APIView):
     permission_classes = [IsAuthenticated]
@@ -146,11 +150,107 @@ class StreamCommentsView(generics.ListAPIView):
         stream_id = self.kwargs['stream_id']
         return Comment.objects.filter(stream_id=stream_id).order_by('-created_at')
 
+
+
+@login_required
+def donate(request):
+    if request.method == 'POST':
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            payment_method = form.cleaned_data['payment_method']
+
+            if payment_method != 'gateway':
+                # Handle manual payment
+                Payment.objects.create(
+                    user=request.user,
+                    amount=amount,
+                    payment_method='manual',
+                    status='pending',
+                    transaction_id=None
+                )
+                return JsonResponse({'status': 'manual_payment_pending'})
+            else:
+                # Handle Midtrans payment
+                snap = midtransclient.Snap(
+                    is_production=False,
+                    server_key=settings.MIDTRANS_SERVER_KEY,
+                    client_key=settings.MIDTRANS_CLIENT_KEY
+                )
+
+                transaction_data = {
+                    'transaction_details': {
+                        'order_id': f'{request.user.id}-{int(time.time())}',
+                        'gross_amount': amount
+                    },
+                    'credit_card': {
+                        'secure': True
+                    },
+                    'customer_details': {
+                        'first_name': request.user.first_name,
+                        'last_name': request.user.last_name,
+                        'email': request.user.email,
+                        'phone': '08111222333'
+                    },
+                    'enabled_payments': []
+                }
+
+                if payment_method == 'bank_transfer':
+                    transaction_data['enabled_payments'].append('bank_transfer')
+                elif payment_method == 'virtual_account':
+                    transaction_data['enabled_payments'].extend(['bca_va', 'bni_va', 'bri_va'])
+                elif payment_method == 'qris':
+                    transaction_data['enabled_payments'].append('qris')
+
+                transaction = snap.create_transaction(transaction_data)
+                transaction_token = transaction['token']
+
+                if payment_method == 'qris':
+                    qris_url = transaction['redirect_url']
+                    return JsonResponse({'qris_url': qris_url})
+
+                return JsonResponse({'token': transaction_token})
+    else:
+        form = PaymentForm()
+    return render(request, 'donate.html', {'form': form})
+
 @csrf_exempt
 def midtrans_notification(request):
+    notif_body = json.loads(request.body)
+    order_id = notif_body['order_id']
+    transaction_status = notif_body['transaction_status']
+    fraud_status = notif_body['fraud_status']
+    
+    try:
+        payment = Payment.objects.get(transaction_id=order_id)
+        if transaction_status == 'capture':
+            if fraud_status == 'challenge':
+                payment.status = 'challenge'
+            elif fraud_status == 'accept':
+                payment.status = 'success'
+        elif transaction_status == 'settlement':
+            payment.status = 'success'
+        elif transaction_status in ['cancel', 'deny', 'expire']:
+            payment.status = 'failed'
+        elif transaction_status == 'pending':
+            payment.status = 'pending'
+
+        payment.save()
+    except Payment.DoesNotExist:
+        pass
+
+    return JsonResponse({'status': 'ok'})
+
+def custom_login(request):
     if request.method == 'POST':
-        notification = json.loads(request.body)
-        order_id = notification.get('order_id')
-        transaction_status = notification.get('transaction_status')
-        # Update your order status based on the notification
-        return JsonResponse({'status': 'ok'})
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('donate')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'registration/login.html', {'form': form})
