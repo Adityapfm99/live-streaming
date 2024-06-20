@@ -78,9 +78,15 @@ python manage.py runserver
 ```bash
 celery -A livestream worker --loglevel=info
 ```
+## Start stream
+
+![Alt text](image/start.png)
+
 
 ## OBS Setting
-
+```bash
+makesure stream keys is same with start stream message
+```
 ![Alt text](image/obs.png)
 
 
