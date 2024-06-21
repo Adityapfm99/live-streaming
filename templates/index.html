@@ -26,27 +26,25 @@
             </div>
             <div id="register_form" style="display: none;">
                 <h2>Register</h2>
-                
                 <div class="form-group">
-                    <input type="text" id="login_username" placeholder="Username">
-                    <input type="password" id="login_password" placeholder="Password">
+                    <input type="text" id="reg_username" placeholder="Username">
+                    <input type="password" id="reg_password" placeholder="Password">
+                    <input type="email" id="reg_email" placeholder="Email">
                     <button onclick="register()">Register</button>
                 </div>
-                
                 <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginForm()">Login here</a></p>
             </div>
         </div>
-        </div>
         <div id="stream_interface" class="stream-container" style="display:none;">
-        <div class="logout-icon" onclick="logout()">
-            <i class="fa fa-sign-out-alt"></i>
-        </div>
+            <div class="logout-icon" onclick="logout()">
+                <i class="fa fa-sign-out-alt"></i>
+            </div>
             <div class="stream-buttons">
                 <button class="stream-btn" onclick="createStream()"><i class="fas fa-video"></i> Create Stream</button>
                 <button class="stream-btn" onclick="startStreamSession()"><i class="fas fa-play"></i> Start Stream</button>
                 <button class="stream-btn" onclick="stopStreamSession()"><i class="fas fa-stop"></i> Stop Stream</button>
                 <button class="stream-btn" onclick="showCommentMenu()"><i class="fas fa-comment"></i> Comment</button>
-                <button class="stream-btn" onclick="showDonateMenu()"><i class="fas fa-donate"></i> Donate</button>    
+                <button class="stream-btn" onclick="showDonateMenu()"><i class="fas fa-donate"></i> Donate</button>
             </div>
             <div class="video-container">
                 <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360"></video>
@@ -70,34 +68,40 @@
                     }
                 }
             </script>
-            <div id="donate_menu" class="donation-container" style="display:none;text-align: center;">
+            <div id="donate_menu" class="donation-container1" style="display:none;text-align: center;">
                 <h2>Donate</h2>
                 <form id="donation-form" method="POST" action="{% url 'donate' %}">
-                    {% csrf_token %}
-                    <label for="id_amount">Amount:</label>
-                    <input type="number" name="amount" id="id_amount" required><br><br>
-                    
-                    <label for="id_payment_method">Payment Method:</label>
-                    <select name="payment_method" id="id_payment_method" onchange="toggleCreditCardFields()" required>
-                        <option value="manual">Manual</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="virtual_account">Virtual Account</option>
-
-                        <option value="credit_card">Credit Card</option>
-                    </select><br><br>
-                    
-                    <div class="credit-card-fields">
-                        <label for="id_cc_number">Credit Card Number:</label>
-                        <input type="text" name="cc_number" id="id_cc_number"><br><br>
-                        <label for="id_cc_name">Name on Card:</label>
-                        <input type="text" name="cc_name" id="id_cc_name"><br><br>
-                        <label for="id_cc_cvv">CVV:</label>
-                        <input type="text" name="cc_cvv" id="id_cc_cvv"><br><br>
+                    <input type="hidden" name="csrfmiddlewaretoken" value="jUA4BIzEvLY1FXDzH06Jnq5cg94d5eZgyzePuHBx5jDJ3hvTMtGTSXdmehgxhSSr">
+                    <div class="form-group">
+                        <label for="id_amount">Amount:</label>
+                        <input type="number" name="amount" id="id_amount" required="">
                     </div>
-
-                    <label for="id_email">Email:</label>
-                    <input type="email" name="email" id="id_email"><br><br>
-
+                    <div class="form-group">
+                        <label for="id_payment_method">Payment Method:</label>
+                        <select name="payment_method" id="id_payment_method" onchange="toggleCreditCardFields()" required="">
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="virtual_account">Virtual Account</option>
+                            <option value="credit_card">Credit Card</option>
+                        </select>
+                    </div>
+                    <div class="credit-card-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="id_cc_number">Credit Card Number:</label>
+                            <input type="text" name="cc_number" id="id_cc_number">
+                        </div>
+                        <div class="form-group">
+                            <label for="id_cc_name">Name on Card:</label>
+                            <input type="text" name="cc_name" id="id_cc_name">
+                        </div>
+                        <div class="form-group">
+                            <label for="id_cc_cvv">CVV:</label>
+                            <input type="text" name="cc_cvv" id="id_cc_cvv">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_email">Email:</label>
+                        <input type="email" name="email" id="id_email">
+                    </div>
                     <button type="submit">Donate</button>
                 </form>
             </div>
@@ -118,7 +122,7 @@
         const avatarUrl = "https://cdn-icons-png.flaticon.com/512/5556/5556499.png";
 
         function showAlert(message) {
-        const alertDiv = document.getElementById('custom-alert');
+            const alertDiv = document.getElementById('custom-alert');
             const alertMessage = document.getElementById('custom-alert-message');
             alertMessage.textContent = message;
             alertDiv.classList.add('show');
@@ -126,12 +130,12 @@
                 alertDiv.classList.remove('show');
             }, 3000); // 3 seconds
         }
-   
 
         function hideAlert() {
             const alertDiv = document.getElementById('custom-alert');
             alertDiv.style.display = 'none';
         }
+
         function register() {
             const username = document.getElementById('reg_username').value;
             const password = document.getElementById('reg_password').value;
@@ -232,7 +236,7 @@
 
         function connectWebSocket(streamId) {
             ws = new WebSocket(`ws://${window.location.host}/ws/stream/${streamId}/`);
-            
+
             ws.onopen = function() {
                 console.log('WebSocket connection opened');
             };
@@ -282,7 +286,7 @@
         }
 
         function startStreamSession() {
-            streamId = localStorage.getItem('stream_id'); 
+            streamId = localStorage.getItem('stream_id');
             if (!streamId) {
                 showAlert('No stream created. Please create a stream first.');
                 return;
@@ -368,7 +372,7 @@
         function displayComment(comment) {
             const commentElement = document.createElement('div');
             commentElement.classList.add('comment');
-            
+
             const avatarElement = document.createElement('img');
             avatarElement.src = avatarUrl;
             avatarElement.alt = `${comment.username}'s avatar`;

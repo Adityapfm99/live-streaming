@@ -11,7 +11,70 @@ body {
     width: 320px;
     border-radius: 5px;
 }
+.donation-container1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh; 
+}
 
+.donation-container1 .donation-form {
+    width: 100%;
+    max-width: 300px; 
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.donation-container1 h2 {
+    text-align: center;
+    font-size: 15px;
+}
+
+.donation-container1 .form-group {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.donation-container1 label {
+    text-align: right;
+   
+    font-size: 15px; 
+}
+
+.donation-container1 select,
+.donation-container1 input[type="text"],
+.donation-container1 input[type="number"],
+.donation-container1 input[type="email"] {
+    padding: 10px;
+    font-size: 12px; 
+    width: 100%;
+    border-radius: 5px;
+    max-width: 300px; 
+    border: 1px solid #ccc;
+}
+
+.donation-container1 button {
+    width: 100%;
+    padding: 20px; /* Increased padding for larger button */
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-size: 18px; /* Increased font size for button text */
+    cursor: pointer;
+}
+
+.donation-container1 button:hover {
+    background-color: #0056b3;
+}
 .header {
     background-color: #ff0000;
     color: white;
@@ -73,7 +136,7 @@ body {
     border-radius: 5px;
 }
 .donation-container {
-    display: flex;
+    display: inline-grid;
     flex-direction: column;
     align-items: center;
 }
@@ -244,3 +307,4 @@ button:hover {
     flex-direction: column;
     text-align: right;
 }
+
