@@ -96,6 +96,12 @@ makesure stream keys is same with start stream message
 ```
 ![Alt text](image/midtrans.png)
 
+## Dashboard RQ Queue
+```bash
+http://0.0.0.0:9181/
+```
+![Alt text](image/que.png)
+
 ## Dashboard midtrans
 ```bash
 
