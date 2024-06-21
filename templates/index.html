@@ -59,6 +59,17 @@
                 <input type="text" id="message" placeholder="Enter your message">
                 <button onclick="sendMessage()">Send</button>
             </div>
+            <script>
+                function toggleCreditCardFields() {
+                    const paymentMethod = document.getElementById('id_payment_method').value;
+                    const creditCardFields = document.querySelector('.credit-card-fields');
+                    if (paymentMethod === 'credit_card') {
+                        creditCardFields.style.display = 'block';
+                    } else {
+                        creditCardFields.style.display = 'none';
+                    }
+                }
+            </script>
             <div id="donate_menu" class="donation-container" style="display:none;text-align: center;">
                 <h2>Donate</h2>
                 <form id="donation-form" method="POST" action="{% url 'donate' %}">
@@ -67,13 +78,26 @@
                     <input type="number" name="amount" id="id_amount" required><br><br>
                     
                     <label for="id_payment_method">Payment Method:</label>
-                    <select name="payment_method" id="id_payment_method">
+                    <select name="payment_method" id="id_payment_method" onchange="toggleCreditCardFields()" required>
+                        <option value="manual">Manual</option>
                         <option value="bank_transfer">Bank Transfer</option>
                         <option value="virtual_account">Virtual Account</option>
-                        <option value="qris">QRIS</option>
-                        <option value="midtrans">Payment Gateway</option>
+
+                        <option value="credit_card">Credit Card</option>
                     </select><br><br>
                     
+                    <div class="credit-card-fields">
+                        <label for="id_cc_number">Credit Card Number:</label>
+                        <input type="text" name="cc_number" id="id_cc_number"><br><br>
+                        <label for="id_cc_name">Name on Card:</label>
+                        <input type="text" name="cc_name" id="id_cc_name"><br><br>
+                        <label for="id_cc_cvv">CVV:</label>
+                        <input type="text" name="cc_cvv" id="id_cc_cvv"><br><br>
+                    </div>
+
+                    <label for="id_email">Email:</label>
+                    <input type="email" name="email" id="id_email"><br><br>
+
                     <button type="submit">Donate</button>
                 </form>
             </div>
@@ -102,6 +126,7 @@
                 alertDiv.classList.remove('show');
             }, 3000); // 3 seconds
         }
+   
 
         function hideAlert() {
             const alertDiv = document.getElementById('custom-alert');
@@ -322,7 +347,9 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ 'username': username, 'message': message }));
             }
+            document.getElementById('message').value = ""; // Clear the input field
         }
+
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             if (isNaN(date.getTime())) {
@@ -337,6 +364,7 @@
             const ss = String(date.getUTCSeconds()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
         }
+
         function displayComment(comment) {
             const commentElement = document.createElement('div');
             commentElement.classList.add('comment');

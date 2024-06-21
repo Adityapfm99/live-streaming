@@ -5,7 +5,7 @@
 
 ```bash
     
-    The system is a live streaming platform with a commenting and donation feature integrated. The key components of the system are:
+    The system is a live streaming platform with a commenting and donation feature integrated with midtrans sandbox. The key components of the system are:
 
     * Frontend: This consists of HTML, CSS, and JavaScript to create the user interface.
     * Backend: Built using Django, a high-level Python web framework.
@@ -32,7 +32,7 @@
     * Stream Management: Authenticated users can create, start, and stop live streams.
     * Video Playback: Uses Video.js to play the live stream.
     * Real-time Comments: Implemented using WebSockets via Django Channels. Users can post comments in real-time, and these comments are  displayed on the video screen.
-    * Donations: Users can make donations through a form. The form allows users to select a payment method Bank Transfer, Virtual Account, QRIS, or Payment Gateway. The donation is processed using the Midtrans API.  __ still in progress__
+    * Donations: Users can make donations through a form. The form allows users to select a payment method  Virtual Account, or Payment Gateway. The donation is processed using the Midtrans API.
 ```
 ## Detailed Workflow
 ```bash
@@ -52,8 +52,9 @@
         Display Comments: Comments are displayed in real-time within a comments section that overlays the video. The comments section has a semi-transparent background.
     5. Donations
         Donation Form: The donation form allows users to enter the amount and select a payment method.
-        Process Payment: Upon form submission, a POST request is sent to the backend. If the selected method is Midtrans, the backend generates a transaction token using the Midtrans API and returns it to the frontend. The Snap.js library is used to handle the payment process.
-        Manual Payments: If the manual payment method is selected, instructions are displayed to the user.
+        Process Payment: Upon form submission, a POST request is sent to the backend. If the selected method is virtual account / credit card, the backend generates a transaction token using the Midtrans API and returns it to the frontend. The Snap.js library is used to handle the payment process.
+    6. Email notifications
+        Send email to user who has success payment -- in progress
 ```
 
 

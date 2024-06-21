@@ -95,28 +95,45 @@ INSTALLED_APPS += (
     'daphne',
     )
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_USE_TLS = True  # Use TLS for port 587
-EMAIL_USE_SSL = False  # Ensure this is set to False
+EMAIL_USE_TLS = True  
+EMAIL_USE_SSL = False 
 EMAIL_HOST_USER = 'adityapfm99@gmail.com'
-EMAIL_HOST_PASSWORD = 'P4ssw0rd@85'
-DEFAULT_FROM_EMAIL = 'test@livestream.com'
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'no-reply@livestream.com'
 # Add Django-Celery-Results configuration
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
+
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'rq.worker': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.core.mail': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 
@@ -125,7 +142,7 @@ RQ_QUEUES = {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
-        'DEFAULT_TIMEOUT': 360,
+        'DEFAULT_TIMEOUT': 3600,
     }
 }
 

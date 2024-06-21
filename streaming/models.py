@@ -35,11 +35,8 @@ class Comment(models.Model):
 
 class Payment(models.Model):
     PAYMENT_METHOD_CHOICES = [
-        ('manual', 'Manual'),
-        ('bank_transfer', 'Bank Transfer'),
         ('virtual_account', 'Virtual Account'),
-        ('qris', 'QRIS'),
-        ('gateway', 'Payment Gateway'),
+        ('credit_card', 'Credit Card')
 
     ]
 

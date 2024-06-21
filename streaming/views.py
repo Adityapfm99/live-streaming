@@ -197,18 +197,19 @@ def donate(request):
                 'customer_details': {
                     'first_name': request.user.first_name if request.user.is_authenticated else 'Anonymous',
                     'last_name': request.user.last_name if request.user.is_authenticated else '',
-                    'email': 'adityapfm99@gmail.com',
-                    'phone': '081278999065'
+                    'email': user_email,
+                    'phone': '08111222333'
                 },
                 'enabled_payments': []
             }
 
-            if payment_method == 'bank_transfer':
-                transaction_data['enabled_payments'].append('bank_transfer')
-            elif payment_method == 'virtual_account':
+            if payment_method == 'virtual_account':
                 transaction_data['enabled_payments'].extend(['bca_va', 'bni_va', 'bri_va'])
-            elif payment_method == 'qris':
-                transaction_data['enabled_payments'].append('qris')
+            elif payment_method == 'credit_card':
+                transaction_data['enabled_payments'].append('credit_card')
+                transaction_data['credit_card']['number'] = form.cleaned_data['cc_number']
+                transaction_data['credit_card']['name'] = form.cleaned_data['cc_name']
+                transaction_data['credit_card']['cvv'] = form.cleaned_data['cc_cvv']
 
             try:
                 transaction = snap.create_transaction(transaction_data)
@@ -217,10 +218,6 @@ def donate(request):
                 queue = get_queue('default')
                 print("==============user======================",user_email)
                 queue.enqueue(send_donation_email, user_email, float(amount))
-
-                if payment_method == 'qris':
-                    qris_url = transaction['redirect_url']
-                    return JsonResponse({'qris_url': qris_url})
 
                 return JsonResponse({'token': transaction_token})
             except midtransclient.error_midtrans.MidtransAPIError as e:
