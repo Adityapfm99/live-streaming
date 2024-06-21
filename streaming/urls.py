@@ -1,6 +1,6 @@
 # streaming/urls.py
 
-from django.urls import path
+from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import RegisterView, CreateStreamView, StartStreamView, StopStreamView, ConfirmDonationView, CreateCommentView, StreamCommentsView, StreamVideoView, custom_login, donate, midtrans_notification
 from drf_yasg.views import get_schema_view
@@ -38,6 +38,7 @@ urlpatterns = [
     path('midtrans-notification/', midtrans_notification, name='midtrans_notification'),
     path('swagger/',  schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('docs/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('django-rq/', include('django_rq.urls')),
 ]
 
 

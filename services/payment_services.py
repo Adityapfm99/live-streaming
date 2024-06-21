@@ -3,7 +3,7 @@ from django.conf import settings
 
 def create_midtrans_transaction(order_id, gross_amount):
     snap = midtransclient.Snap(
-        is_production=False,  
+        is_production=settings.MIDTRANS_IS_PRODUCTION,
         server_key=settings.MIDTRANS_SERVER_KEY,
         client_key=settings.MIDTRANS_CLIENT_KEY
     )

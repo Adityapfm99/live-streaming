@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donate</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ client_key }}"></script>
+</head>
+<body>
+    <h2 style="text-align: center;">Donate</h2>
+    <form id="donation-form" method="POST" action="{% url 'donate' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_amount">Amount:</label>
+            <input type="number" name="amount" id="id_amount" required><br><br>
+        </div>
+        <div class="form-group">
+            <label for="id_payment_method">Payment Method:</label>
+            <select name="payment_method" id="id_payment_method">
+                <option value="manual">Manual</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="virtual_account">Virtual Account</option>
+                <option value="qris">QRIS</option>
+                <option value="midtrans">Payment Gateway</option>
+            </select><br><br>
+        </div>
+        <div class="form-group">
+            <button type="submit">Donate</button>
+        </div>
+    </form>
+
+    <div id="qris-container" style="display: none; text-align: center;">
+        <h3>Scan this QR Code to Pay</h3>
+        <img id="qris-qr-code" src="" alt="QR Code for QRIS Payment">
+    </div>
+
+    <script>
+        document.getElementById('donation-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetch(e.target.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            });
+            const data = await response.json();
+            if (data.token) {
+                snap.pay(data.token, {
+                    onSuccess: function(result) {
+                        alert('Payment success');
+                    },
+                    onPending: function(result) {
+                        alert('Waiting for payment');
+                    },
+                    onError: function(result) {
+                        alert('Payment failed');
+                    },
+                    onClose: function() {
+                        alert('Payment popup closed without finishing the payment');
+                    }
+                });
+            } else if (data.qris_url) {
+                document.getElementById('qris-qr-code').src = data.qris_url;
+                document.getElementById('qris-container').style.display = 'block';
+            } else if (data.status === 'manual_payment_pending') {
+                alert('Please follow the manual payment instructions to complete your donation.');
+            }
+        });
+    </script>
+</body>
+</html>

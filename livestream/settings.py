@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+import ssl
+
+import certifi
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,6 +46,7 @@ INSTALLED_APPS = [
     'livestream',
     'channels',
     'drf_yasg',
+    'django_rq',
 ]
 
 REST_FRAMEWORK = {
@@ -91,9 +95,39 @@ INSTALLED_APPS += (
     'daphne',
     )
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True  # Use TLS for port 587
+EMAIL_USE_SSL = False  # Ensure this is set to False
+EMAIL_HOST_USER = 'adityapfm99@gmail.com'
+EMAIL_HOST_PASSWORD = 'P4ssw0rd@85'
+DEFAULT_FROM_EMAIL = 'test@livestream.com'
 # Add Django-Celery-Results configuration
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
+
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 360,
+    }
+}
 
 ASGI_APPLICATION = 'livestream.asgi.application'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -109,8 +143,9 @@ CHANNEL_LAYERS = {
     },
 }
 
-MIDTRANS_SERVER_KEY = 'SB-Mid-client-pOc8Oo9atQGFVZ7E'
-MIDTRANS_CLIENT_KEY = 'SB-Mid-server-OKkWODAmaeFtviwor83vgXdZ'
+MIDTRANS_SERVER_KEY = 'SB-Mid-server-OKkWODAmaeFtviwor83vgXdZ'
+MIDTRANS_CLIENT_KEY = 'SB-Mid-client-pOc8Oo9atQGFVZ7E'
+MIDTRANS_IS_PRODUCTION = False 
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]

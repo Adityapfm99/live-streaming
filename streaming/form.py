@@ -1,5 +1,7 @@
 from django import forms
 
+from streaming.models import Payment
+
 class PaymentForm(forms.Form):
     PAYMENT_METHOD_CHOICES = [
         ('manual', 'Manual'),
@@ -13,3 +15,10 @@ class PaymentForm(forms.Form):
     payment_method = forms.ChoiceField(choices=PAYMENT_METHOD_CHOICES)
 
     
+
+class PaymentForm(forms.ModelForm):
+    email = forms.EmailField(required=False) 
+
+    class Meta:
+        model = Payment
+        fields = ['amount', 'payment_method', 'email']

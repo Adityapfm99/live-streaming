@@ -11,7 +11,7 @@
     * Backend: Built using Django, a high-level Python web framework.
     * WebSocket Server: Utilizes Django Channels to handle real-time WebSocket connections for live comments.
     * Payment Gateway Integration: Integrates Midtrans for processing donations.
-    * Database: Uses SQLite for development (can be switched to PostgreSQL for production).
+    * Database: Uses SQLite for development 
 ```
 ## Technologies 
 ```bash
@@ -20,10 +20,11 @@
     * JavaScript: For client-side scripting and WebSocket handling.
     * Django: As the backend framework for handling HTTP requests, user authentication, and database interactions.
     * Django Channels: For handling WebSocket connections for real-time features.
-    * Midtrans: For integrating the payment gateway --- inprogress
+    * Midtrans: For integrating the payment gateway 
     * SQLite: As the database for development purposes.
     * Video.js: For handling video playback in the browser.
     * OBS Studio: for video recording and live streaming.
+    * Redis Queue : for sending email notifications when payment
 ```
 ## Workflow : 
 ```bash
@@ -49,7 +50,7 @@
     4. Real-time Comments
         WebSocket Connection: A WebSocket connection is established when the stream starts. Users can send messages via this connection.
         Display Comments: Comments are displayed in real-time within a comments section that overlays the video. The comments section has a semi-transparent background.
-    5. Donations __still in progress__ 
+    5. Donations
         Donation Form: The donation form allows users to enter the amount and select a payment method.
         Process Payment: Upon form submission, a POST request is sent to the backend. If the selected method is Midtrans, the backend generates a transaction token using the Midtrans API and returns it to the frontend. The Snap.js library is used to handle the payment process.
         Manual Payments: If the manual payment method is selected, instructions are displayed to the user.
@@ -74,9 +75,9 @@ http://127.0.0.1:8001/docs/
 python manage.py runserver
 ```
 
-## Start Celery
+## Start Redis for email payment
 ```bash
-celery -A livestream worker --loglevel=info
+python manage.py rqworker default
 ```
 ## Start stream
 
@@ -88,6 +89,12 @@ celery -A livestream worker --loglevel=info
 makesure stream keys is same with start stream message
 ```
 ![Alt text](image/obs.png)
+
+## Donation midtrans payment
+```bash
+
+```
+![Alt text](image/midtrans.png)
 
 
 ## Real-time Comments

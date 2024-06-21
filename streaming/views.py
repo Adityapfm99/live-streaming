@@ -6,6 +6,10 @@ from datetime import time
 import signal
 from django.contrib.auth import login, authenticate
 import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import time
+import logging
 from .models import Payment
 from .form import PaymentForm 
 from django.contrib.auth.models import User
@@ -26,11 +30,15 @@ from .serializers import UserSerializer, StreamSerializer, DonationSerializer, C
 from .models import Donation
 from django.conf import settings
 import os
+from django.contrib.auth.models import User
+from django_rq import get_queue
+from .tasks import send_donation_email
 import midtransclient
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from .snap import Snap 
 from .models import Payment
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -151,68 +159,77 @@ class StreamCommentsView(generics.ListAPIView):
         return Comment.objects.filter(stream_id=stream_id).order_by('-created_at')
 
 
-
-@login_required
+logger = logging.getLogger(__name__)
+# @login_required
+@csrf_exempt
 def donate(request):
-    if request.method == 'POST':
+  if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
             amount = form.cleaned_data['amount']
             payment_method = form.cleaned_data['payment_method']
-
-            if payment_method != 'gateway':
-                # Handle manual payment
-                Payment.objects.create(
-                    user=request.user,
-                    amount=amount,
-                    payment_method='manual',
-                    status='pending',
-                    transaction_id=None
-                )
-                return JsonResponse({'status': 'manual_payment_pending'})
+            email = form.cleaned_data['email']  # Get email from form
+            
+            payment = form.save(commit=False)
+            if request.user.is_authenticated:
+                payment.user = request.user
+                user_email = request.user.email
             else:
-                # Handle Midtrans payment
-                snap = midtransclient.Snap(
-                    is_production=False,
-                    server_key=settings.MIDTRANS_SERVER_KEY,
-                    client_key=settings.MIDTRANS_CLIENT_KEY
-                )
+                anonymous_user, created = User.objects.get_or_create(username='anonymous')
+                payment.user = anonymous_user
+                user_email = email
+            payment.save()
+            # Midtrans Integration
+            snap = midtransclient.Snap(
+                is_production=settings.MIDTRANS_IS_PRODUCTION,
+                server_key=settings.MIDTRANS_SERVER_KEY,
+                client_key=settings.MIDTRANS_CLIENT_KEY
+            )
 
-                transaction_data = {
-                    'transaction_details': {
-                        'order_id': f'{request.user.id}-{int(time.time())}',
-                        'gross_amount': amount
-                    },
-                    'credit_card': {
-                        'secure': True
-                    },
-                    'customer_details': {
-                        'first_name': request.user.first_name,
-                        'last_name': request.user.last_name,
-                        'email': request.user.email,
-                        'phone': '08111222333'
-                    },
-                    'enabled_payments': []
-                }
+            transaction_data = {
+                'transaction_details': {
+                    'order_id': f'{request.user.id}-{int(time.time())}',
+                    'gross_amount': float(amount) 
+                },
+                'credit_card': {
+                    'secure': True
+                },
+                'customer_details': {
+                    'first_name': request.user.first_name if request.user.is_authenticated else 'Anonymous',
+                    'last_name': request.user.last_name if request.user.is_authenticated else '',
+                    'email': 'adityapfm99@gmail.com',
+                    'phone': '081278999065'
+                },
+                'enabled_payments': []
+            }
 
-                if payment_method == 'bank_transfer':
-                    transaction_data['enabled_payments'].append('bank_transfer')
-                elif payment_method == 'virtual_account':
-                    transaction_data['enabled_payments'].extend(['bca_va', 'bni_va', 'bri_va'])
-                elif payment_method == 'qris':
-                    transaction_data['enabled_payments'].append('qris')
+            if payment_method == 'bank_transfer':
+                transaction_data['enabled_payments'].append('bank_transfer')
+            elif payment_method == 'virtual_account':
+                transaction_data['enabled_payments'].extend(['bca_va', 'bni_va', 'bri_va'])
+            elif payment_method == 'qris':
+                transaction_data['enabled_payments'].append('qris')
 
+            try:
                 transaction = snap.create_transaction(transaction_data)
                 transaction_token = transaction['token']
+
+                queue = get_queue('default')
+                print("==============user======================",user_email)
+                queue.enqueue(send_donation_email, user_email, float(amount))
 
                 if payment_method == 'qris':
                     qris_url = transaction['redirect_url']
                     return JsonResponse({'qris_url': qris_url})
 
                 return JsonResponse({'token': transaction_token})
-    else:
-        form = PaymentForm()
-    return render(request, 'donate.html', {'form': form})
+            except midtransclient.error_midtrans.MidtransAPIError as e:
+                logger.error(f"Midtrans API error: {str(e)}")
+                return JsonResponse({'error': str(e)}, status=401)
+        
+        else:
+            form = PaymentForm()
+        return render(request, 'donate.html', {'form': form})
 
 @csrf_exempt
 def midtrans_notification(request):
