@@ -96,6 +96,12 @@ makesure stream keys is same with start stream message
 ```
 ![Alt text](image/midtrans.png)
 
+## Dashboard midtrans
+```bash
+
+```
+![Alt text](image/dashboard_mid.png)
+
 
 ## Real-time Comments
 
