@@ -61,7 +61,7 @@
 ## ERD
 ```bash
 ```
-![Alt text](image/erd1.png)
+![Alt text](image/erdnew.png)
 
 ## API DOCS (swagger)
 ```bash
