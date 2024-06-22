@@ -2,14 +2,19 @@
 
 from asyncio import subprocess
 from asyncio.log import logger
+import base64
 from datetime import time
 import signal
+import ssl
+import certifi
 from django.contrib.auth import login, authenticate
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import time
 import logging
+
+import requests
 from .models import Payment
 from .form import PaymentForm 
 from django.contrib.auth.models import User
@@ -161,9 +166,19 @@ class StreamCommentsView(generics.ListAPIView):
 
 logger = logging.getLogger(__name__)
 # @login_required
+class CustomSnap(Snap):
+    def create_transaction(self, transaction_data):
+        headers = {
+            'Authorization': 'Basic ' + base64.b64encode((self.server_key + ':').encode()).decode(),
+            'Content-Type': 'application/json'
+        }
+        response = requests.post(f'{self.base_url}/transactions', json=transaction_data, headers=headers, verify=False)
+        response.raise_for_status() 
+        return response.json()
+
 @csrf_exempt
 def donate(request):
-  if request.method == 'POST':
+    if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
             amount = form.cleaned_data['amount']
@@ -179,8 +194,8 @@ def donate(request):
                 payment.user = anonymous_user
                 user_email = email
             payment.save()
-            # Midtrans Integration
-            snap = midtransclient.Snap(
+            
+            snap = CustomSnap(
                 is_production=settings.MIDTRANS_IS_PRODUCTION,
                 server_key=settings.MIDTRANS_SERVER_KEY,
                 client_key=settings.MIDTRANS_CLIENT_KEY
@@ -189,7 +204,7 @@ def donate(request):
             transaction_data = {
                 'transaction_details': {
                     'order_id': f'{request.user.id}-{int(time.time())}',
-                    'gross_amount': float(amount) 
+                    'gross_amount': float(amount)
                 },
                 'credit_card': {
                     'secure': True
@@ -198,7 +213,7 @@ def donate(request):
                     'first_name': request.user.first_name if request.user.is_authenticated else 'Anonymous',
                     'last_name': request.user.last_name if request.user.is_authenticated else '',
                     'email': user_email,
-                    'phone': '08111222333'
+                    'phone': '0811111111'
                 },
                 'enabled_payments': []
             }
@@ -216,17 +231,24 @@ def donate(request):
                 transaction_token = transaction['token']
 
                 queue = get_queue('default')
-                print("==============user======================",user_email)
+                print("==============user======================", user_email)
                 queue.enqueue(send_donation_email, user_email, float(amount))
 
                 return JsonResponse({'token': transaction_token})
-            except midtransclient.error_midtrans.MidtransAPIError as e:
-                logger.error(f"Midtrans API error: {str(e)}")
+            except requests.exceptions.SSLError as e:
+                logger.error(f"SSL error: {str(e)}")
+                return JsonResponse({'error': str(e)}, status=401)
+            except Exception as e:
+                logger.error(f"Error: {str(e)}")
                 return JsonResponse({'error': str(e)}, status=401)
         
-        else:
-            form = PaymentForm()
-        return render(request, 'donate.html', {'form': form})
+    else:
+        form = PaymentForm()
+    return render(request, 'donate.html', {'form': form})
+
+def test_email_view(request):
+    send_donation_email('adityapfm99@gmail.com', 13.00)
+    return HttpResponse("Test email sent")
 
 @csrf_exempt
 def midtrans_notification(request):

@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 import ssl
-
+from decouple import config
 import certifi
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -95,13 +95,20 @@ INSTALLED_APPS += (
     'daphne',
     )
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True  
+# use email mailhog 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+
+# EMAIL_BACKEND = 'livestream.email_backends.CustomEmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+EMAIL_USE_TLS = False 
 EMAIL_USE_SSL = False 
-EMAIL_HOST_USER = 'adityapfm99@gmail.com'
-EMAIL_HOST_PASSWORD = ''
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+
+EMAIL_DEBUG = True
 DEFAULT_FROM_EMAIL = 'no-reply@livestream.com'
 # Add Django-Celery-Results configuration
 CELERY_RESULT_BACKEND = 'django-db'
@@ -112,28 +119,23 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'debug.log',
+        'console': {
+            'class': 'logging.StreamHandler',
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'rq.worker': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'django.core.mail': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'django': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+        'propagate': False,
+    },
+    'django.request': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+        'propagate': False,
     },
 }
 

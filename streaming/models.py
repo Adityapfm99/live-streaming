@@ -1,7 +1,9 @@
 # streaming/models.py
 
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from video_encoding.fields import VideoField
 from django import forms
 
@@ -23,6 +25,10 @@ class Donation(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    email = models.EmailField(default='default@example.com')
+    is_email_sent = models.BooleanField(default=False)
+    donation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
 
 class Comment(models.Model):
     username = models.CharField(max_length=255)

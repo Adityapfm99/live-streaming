@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from streaming.views import RegisterView, ConfirmDonationView, CreateCommentView, StreamCommentsView, donate, index, midtrans_notification
+from streaming.views import RegisterView, ConfirmDonationView, CreateCommentView, StreamCommentsView, donate, index, midtrans_notification, test_email_view
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf.urls.static import static
@@ -34,6 +34,7 @@ urlpatterns = [
     path('swagger/',  schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('docs/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('django-rq/', include('django_rq.urls')),
+    path('test-email/', test_email_view, name='test_email_view'),
 ]
 
 if settings.DEBUG:
