@@ -4,11 +4,11 @@ import os
 from django.core.asgi import get_asgi_application
 from django.urls import path, re_path
 
-from streaming import consumers
-
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'livestream.settings')
 
 application = get_asgi_application()
+
+from streaming import consumers
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
