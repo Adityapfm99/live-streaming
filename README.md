@@ -99,6 +99,8 @@ makesure stream keys is same with start stream message
 
 ## Dashboard RQ Queue
 ```bash
+rq-dashboard
+
 http://0.0.0.0:9181/
 ```
 ![Alt text](image/que.png)
