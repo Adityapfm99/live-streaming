@@ -127,6 +127,8 @@ Midtrans Sandbox
 
 ## Dashboard Mailhog
 ```bash
+run: mailhog
+
 http://0.0.0.0:8025/
 ```
 ![Alt text](image/mailhog.png)
