@@ -1,6 +1,6 @@
 # live-streaming-test
 ```bash
-A live streaming platform integrated with commenting and donation features using Midtrans sandbox. The key components include:
+A live streaming platform integrated with commenting and donation features using Midtrans sandbox and mail hog for notifications email.
 ```
 ## System Design
 
