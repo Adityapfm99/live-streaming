@@ -27,6 +27,8 @@ A live streaming platform integrated with commenting and donation features using
     * OBS Studio: for video recording and live streaming.
     * Redis  : for sending Queue email notifications when donate payment
     * MailHog : is an Open Source email testing tool with a fake SMTP server underneath.
+    * pytest : framework for Python that simplifies writing and running tests.
+    * RQ-Dashboard : Web interface to monitor tasks and jobs in Redis queues (email notifications).
 ```
 ## Workflow : 
 ```bash
