@@ -93,6 +93,13 @@ makesure stream keys is same with start stream message
 ```
 ![Alt text](image/obs.png)
 
+## Unit Test
+
+```bash
+python manage.py test streaming.tests
+```
+![Alt text](image/tests.png)
+
 ## Real-time Comments
 
 ![Alt text](image/comment.png)

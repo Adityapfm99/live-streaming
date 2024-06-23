@@ -44,16 +44,36 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from .snap import Snap 
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Payment
 from django.contrib.auth.forms import AuthenticationForm
 
 def index(request):
     return render(request, 'index.html')
 
+class UserSerializer(UserSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
+
 class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
+    queryset = User.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email')
+        user = User.objects.create_user(username=username, password=password, email=email)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
 
 class StartStreamView(APIView):
     permission_classes = [IsAuthenticated]
